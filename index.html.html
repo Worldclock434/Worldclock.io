@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>World Clock & Time Zone Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1a2744;--navy-dark:#0f1a35;
+  --accent:#3d6fd4;--text:#1e2a3a;--text-muted:#5a6a80;
+  --border:#c5d3e8;--white:#ffffff;--red:#c0392b;
+  --row-alt:#f4f7ff;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+body{background:#dce6f5;font-family:var(--sans);min-height:100vh;padding:24px}
+.page{max-width:920px;margin:0 auto}
+
+.header-card{
+  background:linear-gradient(135deg,#0f1a35 0%,#1a2744 55%,#2e4a82 100%);
+  border-radius:14px 14px 0 0;
+  padding:20px 28px 18px;
+  border-bottom:2px solid #3d6fd4;
+}
+.header-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.header-icon{font-size:1.9rem;line-height:1}
+.header-title h1{color:#fff;font-size:1.3rem;font-weight:700}
+.header-title p{color:#7a9acc;font-size:0.7rem;margin-top:2px;letter-spacing:0.05em;text-transform:uppercase}
+
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctrl-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 14px}
+.ctrl-pill label{color:#8aa4cc;font-size:0.67rem;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap}
+#refZone{background:transparent;border:none;outline:none;color:#fff;font-family:var(--sans);font-size:0.85rem;font-weight:600;cursor:pointer;max-width:230px}
+#refZone option{background:#1a2744;color:#fff}
+#refTime{background:transparent;border:none;outline:none;color:#ffd070;font-family:var(--mono);font-size:0.95rem;font-weight:700;width:80px;cursor:pointer}
+.reset-btn{padding:8px 16px;border-radius:20px;border:1px solid rgba(255,150,80,0.4);background:rgba(255,150,80,0.1);color:#ffb060;font-size:0.74rem;font-weight:700;cursor:pointer;font-family:var(--sans);transition:all 0.15s;white-space:nowrap}
+.reset-btn:hover{background:rgba(255,150,80,0.2)}
+.hint{color:#4a6a94;font-size:0.69rem;margin-top:10px}
+.hint b{color:#7a9acc}
+
+.table-wrap{background:var(--white);border-radius:0 0 14px 14px;overflow:hidden;box-shadow:0 6px 28px rgba(15,26,53,0.18)}
+table{width:100%;border-collapse:collapse;font-size:0.85rem}
+thead tr{background:linear-gradient(180deg,#1a2744 0%,#0f1a35 100%)}
+thead th{padding:11px 16px;color:#aabedd;font-size:0.66rem;font-weight:600;text-transform:uppercase;letter-spacing:0.09em;border-right:1px solid rgba(255,255,255,0.07);text-align:left;white-space:nowrap}
+thead th:last-child{border-right:none;width:40px}
+thead th.th-live{background:#0e3322;color:#6de0a8}
+thead th.th-conv{background:#2d2000;color:#ffd070}
+
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.08s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:nth-child(even){background:var(--row-alt)}
+tbody tr:hover{background:#dce8ff!important}
+
+td{padding:10px 16px;vertical-align:middle;border-right:1px solid var(--border);white-space:nowrap}
+td:last-child{border-right:none}
+td.col-num{font-family:var(--mono);font-size:0.71rem;color:#aab;width:38px;text-align:center;font-weight:600}
+td.col-country{font-weight:600;color:var(--text);min-width:160px}
+td.col-tz{font-family:var(--mono);font-size:0.79rem;color:var(--accent);font-weight:700;width:66px}
+td.col-offset{font-family:var(--mono);font-size:0.78rem;color:var(--text-muted);width:84px}
+td.col-live{background:#f0fdf7;font-family:var(--mono);font-size:1.05rem;font-weight:700;color:#0d6640;letter-spacing:0.02em;width:120px}
+td.col-conv{background:#fffbee;font-family:var(--mono);font-size:1.05rem;font-weight:700;color:#9a6000;letter-spacing:0.02em;width:130px}
+td.col-conv.empty{color:#ccc;font-size:0.78rem;font-weight:400;font-family:var(--sans)}
+td.col-date{font-size:0.75rem;color:var(--text-muted);width:100px}
+td.col-del{width:40px;text-align:center}
+.del-btn{background:none;border:none;color:#ccc;font-size:1rem;cursor:pointer;padding:3px 7px;border-radius:4px;transition:all 0.12s;line-height:1}
+.del-btn:hover{color:var(--red);background:#fff0f0}
+
+.day-badge{font-size:0.63rem;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle}
+.day-fwd{background:#fff3d0;color:#c07000}
+.day-back{background:#fff0f0;color:#c0392b}
+
+/* ref zone star indicator in conv column header */
+.conv-ref-label{font-size:0.6rem;color:#ffd07088;display:block;margin-top:2px;font-weight:400;letter-spacing:0.05em}
+
+.bottom-bar{background:var(--navy-dark);border-top:1px solid rgba(255,255,255,0.08);padding:10px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.add-btn{display:flex;align-items:center;gap:7px;padding:8px 18px;border-radius:8px;border:1px dashed rgba(79,255,176,0.35);background:rgba(79,255,176,0.06);color:#4fffb0;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:var(--sans);transition:all 0.15s}
+.add-btn:hover{background:rgba(79,255,176,0.14);border-style:solid}
+.add-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
+.row-count{color:#4a6080;font-size:0.71rem;font-family:var(--mono);margin-left:auto}
+
+.backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center}
+.backdrop.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:26px;width:380px;box-shadow:0 12px 48px rgba(0,0,0,0.3)}
+.modal h3{font-size:1.05rem;font-weight:700;color:var(--navy);margin-bottom:18px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:5px}
+.field input,.field select{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:9px 11px;font-family:var(--sans);font-size:0.86rem;outline:none;color:var(--text);background:#fff;transition:border-color 0.15s}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn-primary{flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:var(--sans);font-size:0.87rem;font-weight:700;cursor:pointer}
+.btn-primary:hover{background:#5b8de8}
+.btn-secondary{padding:10px 18px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--text-muted);font-family:var(--sans);font-size:0.87rem;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header-card">
+  <div class="header-top">
+    <div class="header-icon">🌐</div>
+    <div class="header-title">
+      <h1>World Clock &amp; Time Zone Converter</h1>
+      <p>Live clocks · convert any time across zones</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-pill">
+      <label>Zone</label>
+      <select id="refZone"></select>
+    </div>
+    <div class="ctrl-pill">
+      <label>at</label>
+      <input type="time" id="refTime" step="60"/>
+    </div>
+    <button class="reset-btn" onclick="resetConversion()">✕ Clear conversion</button>
+  </div>
+  <div class="hint">The <b>Current Time</b> column always shows live time. Set a <b>Zone + time</b> above to fill the <b>Converted Time</b> column — what time it would be everywhere else at that moment.</div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Country / City</th>
+        <th>TZ Code</th>
+        <th>UTC Offset</th>
+        <th class="th-live">Current Time</th>
+        <th class="th-conv"><span>Converted Time</span><span class="conv-ref-label" id="convLabel">— set zone &amp; time above —</span></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tzBody"></tbody>
+  </table>
+  <div class="bottom-bar">
+    <button class="add-btn" onclick="openModal()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add country
+    </button>
+    <span class="row-count" id="rowCount"></span>
+  </div>
+</div>
+
+</div>
+
+<div class="backdrop" id="backdrop" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Add a country / city</h3>
+    <div class="field">
+      <label>Country or city name</label>
+      <input type="text" id="mName" placeholder="e.g. Singapore" list="mNameList"/>
+      <datalist id="mNameList"></datalist>
+    </div>
+    <div class="field">
+      <label>Timezone</label>
+      <select id="mZone"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmAdd()">Add Row</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL=[["Afghanistan","Asia/Kabul"],["Albania","Europe/Tirane"],["Algeria","Africa/Algiers"],["Argentina","America/Argentina/Buenos_Aires"],["Armenia","Asia/Yerevan"],["Australia (Sydney)","Australia/Sydney"],["Australia (Melbourne)","Australia/Melbourne"],["Australia (Perth)","Australia/Perth"],["Australia (Brisbane)","Australia/Brisbane"],["Austria","Europe/Vienna"],["Azerbaijan","Asia/Baku"],["Bahrain","Asia/Bahrain"],["Bangladesh","Asia/Dhaka"],["Belarus","Europe/Minsk"],["Belgium","Europe/Brussels"],["Bolivia","America/La_Paz"],["Brazil (São Paulo)","America/Sao_Paulo"],["Bulgaria","Europe/Sofia"],["Cambodia","Asia/Phnom_Penh"],["Canada (Toronto)","America/Toronto"],["Canada (Vancouver)","America/Vancouver"],["Canada (Calgary)","America/Edmonton"],["Chile","America/Santiago"],["China","Asia/Shanghai"],["Colombia","America/Bogota"],["Croatia","Europe/Zagreb"],["Czech Republic","Europe/Prague"],["Denmark","Europe/Copenhagen"],["Ecuador","America/Guayaquil"],["Egypt","Africa/Cairo"],["Estonia","Europe/Tallinn"],["Ethiopia","Africa/Addis_Ababa"],["Finland","Europe/Helsinki"],["France / Paris","Europe/Paris"],["Germany","Europe/Berlin"],["Ghana","Africa/Accra"],["Greece","Europe/Athens"],["Hong Kong","Asia/Hong_Kong"],["Hungary","Europe/Budapest"],["Iceland","Atlantic/Reykjavik"],["India","Asia/Kolkata"],["Indonesia (Jakarta)","Asia/Jakarta"],["Iran","Asia/Tehran"],["Iraq","Asia/Baghdad"],["Ireland","Europe/Dublin"],["Israel","Asia/Jerusalem"],["Italy","Europe/Rome"],["Japan","Asia/Tokyo"],["Jordan","Asia/Amman"],["Kazakhstan","Asia/Almaty"],["Kenya","Africa/Nairobi"],["South Korea","Asia/Seoul"],["Kuwait","Asia/Kuwait"],["Latvia","Europe/Riga"],["Lebanon","Asia/Beirut"],["Lithuania","Europe/Vilnius"],["Malaysia","Asia/Kuala_Lumpur"],["Mexico (Mexico City)","America/Mexico_City"],["Morocco","Africa/Casablanca"],["Myanmar","Asia/Rangoon"],["Nepal","Asia/Kathmandu"],["Netherlands","Europe/Amsterdam"],["New Zealand","Pacific/Auckland"],["Nigeria","Africa/Lagos"],["Norway","Europe/Oslo"],["Oman","Asia/Muscat"],["Pakistan","Asia/Karachi"],["Peru","America/Lima"],["Philippines","Asia/Manila"],["Poland","Europe/Warsaw"],["Portugal","Europe/Lisbon"],["Qatar","Asia/Qatar"],["Romania","Europe/Bucharest"],["Russia (Moscow)","Europe/Moscow"],["Saudi Arabia","Asia/Riyadh"],["Serbia","Europe/Belgrade"],["Singapore","Asia/Singapore"],["South Africa","Africa/Johannesburg"],["Spain","Europe/Madrid"],["Sri Lanka","Asia/Colombo"],["Sweden","Europe/Stockholm"],["Switzerland","Europe/Zurich"],["Taiwan","Asia/Taipei"],["Tanzania","Africa/Dar_es_Salaam"],["Thailand","Asia/Bangkok"],["Turkey","Europe/Istanbul"],["UAE / Dubai","Asia/Dubai"],["Ukraine","Europe/Kiev"],["United Kingdom","Europe/London"],["USA (New York)","America/New_York"],["USA (Chicago)","America/Chicago"],["USA (Denver)","America/Denver"],["USA (Los Angeles)","America/Los_Angeles"],["USA (Phoenix)","America/Phoenix"],["USA (Honolulu)","Pacific/Honolulu"],["Uruguay","America/Montevideo"],["Uzbekistan","Asia/Tashkent"],["Venezuela","America/Caracas"],["Vietnam","Asia/Ho_Chi_Minh"]];
+
+const ABBR={"Asia/Kolkata":"IST","Asia/Manila":"PST","America/New_York":"EST","Europe/Paris":"CET","Asia/Dubai":"GST","Asia/Tokyo":"JST","America/Denver":"MST","America/Chicago":"CST","Europe/London":"GMT","Asia/Shanghai":"CST","Asia/Seoul":"KST","Australia/Sydney":"AEST","America/Los_Angeles":"PST","Asia/Karachi":"PKT","Asia/Dhaka":"BST","Asia/Bangkok":"ICT","Europe/Moscow":"MSK","Asia/Singapore":"SGT","Europe/Berlin":"CET","Pacific/Auckland":"NZST","America/Sao_Paulo":"BRT","Africa/Johannesburg":"SAST","Asia/Riyadh":"AST","Asia/Qatar":"AST","America/Toronto":"EST","Europe/Amsterdam":"CET","Asia/Hong_Kong":"HKT","Asia/Taipei":"CST","Asia/Ho_Chi_Minh":"ICT","Asia/Kuala_Lumpur":"MYT","Asia/Tehran":"IRST","Asia/Kathmandu":"NPT","Asia/Colombo":"SLST","Asia/Tashkent":"UZT","Asia/Almaty":"ALMT","Asia/Yerevan":"AMT","Asia/Baku":"AZT","Africa/Cairo":"EET","Africa/Lagos":"WAT","Africa/Nairobi":"EAT","Africa/Addis_Ababa":"EAT","Europe/Athens":"EET","Europe/Helsinki":"EET","Europe/Warsaw":"CET","Europe/Prague":"CET","Europe/Budapest":"CET","Europe/Vienna":"CET","Europe/Zurich":"CET","Europe/Stockholm":"CET","Europe/Oslo":"CET","Europe/Copenhagen":"CET","Europe/Brussels":"CET","Europe/Rome":"CET","Europe/Madrid":"CET","Europe/Lisbon":"WET","Europe/Dublin":"GMT","Europe/Bucharest":"EET","Europe/Kiev":"EET","Europe/Sofia":"EET","Europe/Minsk":"FET","Europe/Tallinn":"EET","Europe/Riga":"EET","Europe/Vilnius":"EET","Europe/Belgrade":"CET","Atlantic/Reykjavik":"GMT","America/Bogota":"COT","America/Lima":"PET","America/Santiago":"CLT","America/La_Paz":"BOT","America/Caracas":"VET","America/Guayaquil":"ECT","America/Montevideo":"UYT","America/Argentina/Buenos_Aires":"ART","America/Halifax":"AST","America/Edmonton":"MST","America/Vancouver":"PST","Pacific/Honolulu":"HST","Australia/Melbourne":"AEST","Australia/Perth":"AWST","Australia/Brisbane":"AEST","Asia/Jakarta":"WIB","Asia/Rangoon":"MMT","Asia/Phnom_Penh":"ICT","Asia/Kabul":"AFT","Asia/Bahrain":"AST","Asia/Kuwait":"AST","Asia/Muscat":"GST","Asia/Amman":"EET","Asia/Beirut":"EET","Asia/Baghdad":"AST","Asia/Jerusalem":"IST"};
+
+function abbr(z){return ABBR[z]||z.split("/").pop().replace(/_/g," ")}
+
+let rows=[
+  {name:"India",          zone:"Asia/Kolkata"},
+  {name:"Philippines",    zone:"Asia/Manila"},
+  {name:"US - New York",  zone:"America/New_York"},
+  {name:"France / Paris", zone:"Europe/Paris"},
+  {name:"UAE - Dubai",    zone:"Asia/Dubai"},
+  {name:"Japan",          zone:"Asia/Tokyo"},
+  {name:"US - Denver",    zone:"America/Denver"},
+  {name:"US - Chicago",   zone:"America/Chicago"},
+];
+
+// conversion state — null means no conversion set
+let convBase = null; // a Date object representing the reference moment
+
+function offsetMin(zone,d){
+  const fmt=tz=>new Intl.DateTimeFormat("en-US",{timeZone:tz,hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(d);
+  const mins=p=>+p.find(x=>x.type==="hour").value*60+ +p.find(x=>x.type==="minute").value;
+  let diff=mins(fmt(zone))-mins(fmt("UTC"));
+  if(diff>720)diff-=1440;if(diff<-720)diff+=1440;
+  return diff;
+}
+function fmtOffset(m){const s=m>=0?"+":"-";const h=Math.floor(Math.abs(m)/60);const mn=Math.abs(m)%60;return"UTC "+s+h+(mn?":"+String(mn).padStart(2,"0"):"");}
+function fmtTime(d,z){return new Intl.DateTimeFormat("en-US",{timeZone:z,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d).replace(/^24:/,"00:");}
+function fmtHM(d,z){return new Intl.DateTimeFormat("en-US",{timeZone:z,hour:"2-digit",minute:"2-digit",hour12:false}).format(d).replace(/^24:/,"00:");}
+function fmtDate(d,z){return new Intl.DateTimeFormat("en-US",{timeZone:z,weekday:"short",month:"short",day:"numeric"}).format(d);}
+function doy(d,z){const s=new Intl.DateTimeFormat("en-US",{timeZone:z,year:"numeric",month:"numeric",day:"numeric"}).format(d);const[m,dy,y]=s.split("/").map(Number);return y*400+m*32+dy;}
+
+function getRefZone(){return document.getElementById("refZone").value;}
+
+// Build convBase from current zone+time inputs
+function buildConvBase(){
+  const zone=getRefZone();
+  const val=document.getElementById("refTime").value;
+  if(!val)return null;
+  const [hh,mm]=val.split(":").map(Number);
+  // We need to find a Date such that in `zone`, the time is hh:mm
+  // Strategy: take today in that zone, set hours/minutes
+  const now=new Date();
+  const cur=fmtHM(now,zone).split(":").map(Number);
+  const diffMs=((hh-cur[0])*60+(mm-cur[1]))*60000;
+  return new Date(now.getTime()+diffMs);
+}
+
+function updateConvLabel(){
+  const zone=getRefZone();
+  const val=document.getElementById("refTime").value;
+  const lbl=document.getElementById("convLabel");
+  if(convBase){
+    const zname=ALL.find(([,z])=>z===zone)?.[0]||zone;
+    lbl.textContent=`when it's ${val} in ${zname}`;
+  } else {
+    lbl.textContent="— set zone & time above —";
+  }
+}
+
+function render(){
+  const now=new Date();
+  const refDOY = convBase ? doy(convBase, getRefZone()) : null;
+  let html="";
+  rows.forEach((r,i)=>{
+    const off=offsetMin(r.zone,now);
+    const liveTime=fmtTime(now,r.zone);
+    const liveDate=fmtDate(now,r.zone);
+
+    let convCell="";
+    if(convBase){
+      const ct=fmtHM(convBase,r.zone);
+      const cd=fmtDate(convBase,r.zone);
+      const rowDOY=doy(convBase,r.zone);
+      let badge="";
+      if(rowDOY>refDOY)badge=`<span class="day-badge day-fwd">+1</span>`;
+      else if(rowDOY<refDOY)badge=`<span class="day-badge day-back">-1</span>`;
+      convCell=`${ct}${badge}<span style="font-size:0.68rem;color:#b08030;font-family:var(--sans);font-weight:400;margin-left:8px">${cd}</span>`;
+    } else {
+      convCell=`<span style="color:#ccc;font-size:0.75rem;font-family:var(--sans);font-weight:400">—</span>`;
+    }
+
+    html+=`<tr>
+      <td class="col-num">${i+1}</td>
+      <td class="col-country">${r.name}</td>
+      <td class="col-tz">${abbr(r.zone)}</td>
+      <td class="col-offset">${fmtOffset(off)}</td>
+      <td class="col-live">${liveTime}<span style="font-size:0.68rem;color:#4a8060;font-family:var(--sans);font-weight:400;margin-left:8px">${liveDate}</span></td>
+      <td class="col-conv">${convCell}</td>
+      <td class="col-del"><button class="del-btn" onclick="delRow(${i})" title="Remove">✕</button></td>
+    </tr>`;
+  });
+  document.getElementById("tzBody").innerHTML=html;
+  document.getElementById("rowCount").textContent=rows.length+" zone"+(rows.length!==1?"s":"");
+}
+
+function resetConversion(){
+  convBase=null;
+  document.getElementById("refTime").value="";
+  updateConvLabel();
+  render();
+}
+
+function delRow(i){rows.splice(i,1);render();}
+
+function buildRefSelect(){
+  const sel=document.getElementById("refZone");
+  sel.innerHTML="";
+  ALL.forEach(([n,z])=>{
+    const o=document.createElement("option");
+    o.value=z;o.textContent=n+" ("+abbr(z)+")";
+    if(z==="Asia/Kolkata")o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+// When zone or time changes, recompute convBase
+function onControlChange(){
+  const val=document.getElementById("refTime").value;
+  if(val){
+    convBase=buildConvBase();
+  } else {
+    convBase=null;
+  }
+  updateConvLabel();
+  render();
+}
+
+document.getElementById("refZone").addEventListener("change",onControlChange);
+document.getElementById("refTime").addEventListener("change",onControlChange);
+document.getElementById("refTime").addEventListener("input",onControlChange);
+
+// Modal
+function openModal(){
+  const dl=document.getElementById("mNameList");
+  const sel=document.getElementById("mZone");
+  dl.innerHTML="";sel.innerHTML="";
+  ALL.forEach(([n,z])=>{
+    const opt=document.createElement("option");opt.value=n;dl.appendChild(opt);
+    const o=document.createElement("option");o.value=z;o.textContent=n+" — "+abbr(z);sel.appendChild(o);
+  });
+  document.getElementById("mName").value="";
+  document.getElementById("backdrop").classList.add("open");
+  setTimeout(()=>document.getElementById("mName").focus(),50);
+}
+function closeModal(){document.getElementById("backdrop").classList.remove("open");}
+document.getElementById("mName")?.addEventListener("input",function(){
+  const v=this.value.trim().toLowerCase();
+  const match=ALL.find(([n])=>n.toLowerCase()===v);
+  if(match)document.getElementById("mZone").value=match[1];
+});
+function confirmAdd(){
+  const name=document.getElementById("mName").value.trim();
+  const zone=document.getElementById("mZone").value;
+  if(!name){document.getElementById("mName").focus();return;}
+  rows.push({name,zone});
+  closeModal();
+  render();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+buildRefSelect();
+render();
+setInterval(render,1000);
+</script>
+</body>
+</html>
